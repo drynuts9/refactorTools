@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>レガシーフレームサイト</title>
+</head>
+<!-- 画面を上下に 100px, 残り全部, 50px の3分割にする -->
+<frameset rows="100,*,50">
+    <frame src="header.html" name="header" scrolling="no" noresize>
+    <frame src="content.html" name="content">
+    <frame src="footer.html" name="footer" scrolling="no" noresize>
+    
+    <noframes>
+        <body>
+            <p>このブラウザはフレームに対応していません。</p>
+        </body>
+    </noframes>
+</frameset>
+</html>
