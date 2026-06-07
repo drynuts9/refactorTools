@@ -1,0 +1,144 @@
+history chat url:
+https://chatgpt.com/s/t_6a257df92b008191bca22d67c31baf70
+
+Yes — for large PHP 7 → PHP 8 migrations, agent-style workflows work very well because the task is repetitive but requires context-sensitive fixes.
+
+A good setup is usually split into specialized agents/roles instead of one giant prompt.
+
+Typical pipeline:
+
+Codebase
+  ↓
+Scanner agent
+  ↓
+Classification agent
+  ↓
+Fix agent
+  ↓
+Verification agent
+  ↓
+Human review
+
+You do not necessarily need many .md files, but having a few focused instruction files helps a lot.
+
+A practical structure:
+
+/agents
+    scanner.md
+    fixer.md
+    verifier.md
+/rules
+    php8-migration.md
+
+Example responsibilities:
+
+1. Scanner agent
+
+Find risky patterns only.
+
+Example targets:
+
+$_POST["x"]
+$_GET["x"]
+$_SESSION["x"]
+$row["field"]
+
+without:
+
+isset
+??
+array_key_exists
+empty
+
+Output:
+
+file: user.php
+line: 52
+pattern: undefined-array-key-risk
+code: $_POST["name"]
+
+This agent should NOT modify code.
+
+2. Fixer agent
+
+Receives findings and rewrites carefully.
+
+Example transform:
+
+$_POST["name"]
+
+→
+
+$_POST["name"] ?? ""
+
+But context matters.
+
+Sometimes better:
+
+isset($_POST["name"])
+
+or:
+
+trim($_POST["name"] ?? "")
+
+So the fixer agent needs semantic understanding.
+
+3. Verifier agent
+
+Checks whether:
+
+syntax still valid
+logic changed accidentally
+nullable values break later code
+"" vs null matters
+duplicate fixes introduced
+
+Example:
+
+intval($_POST["age"] ?? "")
+
+might hide bugs.
+
+Verifier can flag:
+
+“possible type regression”
+“empty string passed to numeric function”
+
+A shared migration rule file helps consistency.
+
+Example php8-migration.md:
+
+Rules:
+- Never suppress warnings with @
+- Prefer ?? over isset ternary
+- Prefer local variables over mutating $_POST
+- Use "" for text fields
+- Use null for optional numeric fields
+- Preserve original behavior
+
+For very large projects, another useful agent is:
+
+Dependency impact agent
+
+Checks:
+
+downstream usage
+database assumptions
+strict comparisons
+
+Example:
+
+if ($age === null)
+
+becomes broken if fixer used "".
+
+This is where many automated migrations fail.
+
+The most effective real-world approach is usually:
+
+1.scanner creates machine-readable report
+2.fixer makes patches
+3.verifier reviews patches
+4.human reviews only uncertain cases
+
+instead of humans manually fixing line-by-line.
