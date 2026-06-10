@@ -1,0 +1,301 @@
+AGENT 1 — SCANNER
+
+
+file: LegacyUserLogic.php
+line: 7
+pattern: undefined-array-key-risk
+code: if ($_SERVER["REQUEST_METHOD"] == "POST") {
+
+file: LegacyUserLogic.php
+line: 9
+pattern: undefined-array-key-risk
+code: if ($_POST["name"]) {
+
+file: LegacyUserLogic.php
+line: 10
+pattern: undefined-array-key-risk
+code: $name = $_POST["name"];
+
+file: LegacyUserLogic.php
+line: 16
+pattern: undefined-array-key-risk
+code: if ($_POST["age"]) {
+
+file: LegacyUserLogic.php
+line: 17
+pattern: undefined-array-key-risk
+code: $age = $_POST["age"];
+
+file: LegacyUserLogic.php
+line: 26
+pattern: undefined-array-key-risk
+code: if ($_POST["sex"] == "male" || $_POST["sex"] == "female" || $_POST["sex"] == "other") {  [3 accesses]
+
+file: LegacyUserLogic.php
+line: 27
+pattern: undefined-array-key-risk
+code: $sex = $_POST["sex"];
+
+file: LegacyUserLogic.php
+line: 32
+pattern: undefined-array-key-risk
+code: if ($_POST["tel"]) {
+
+file: LegacyUserLogic.php
+line: 33
+pattern: undefined-array-key-risk
+code: $tel = $_POST["tel"];
+
+file: LegacyUserLogic.php
+line: 41
+pattern: undefined-array-key-risk
+code: if ($_POST["email"]) {
+
+file: LegacyUserLogic.php
+line: 42
+pattern: undefined-array-key-risk
+code: $email = $_POST["email"];
+
+file: LegacyUserLogic.php
+line: 51
+pattern: undefined-array-key-risk
+code: if ($_POST["address"]) {
+
+file: LegacyUserLogic.php
+line: 52
+pattern: undefined-array-key-risk
+code: $address = $_POST["address"];
+AGENT 2 — FIXER
+
+
+file: LegacyUserLogic.php
+line: 7
+fix: added ?? "" default for SERVER text field, tightened to ===
+---
+- if ($_SERVER["REQUEST_METHOD"] == "POST") {
++ if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST") {
+
+file: LegacyUserLogic.php
+lines: 9–13
+fix: extract to local variable with ?? "", collapsed if/else to single guard
+---
+- if ($_POST["name"]) {
+-     $name = $_POST["name"];
+- } else {
+-     $errors[] = "Name is required.";
+- }
++ $name = $_POST["name"] ?? "";
++ if ($name === "") {
++     $errors[] = "Name is required.";
++ }
+
+file: LegacyUserLogic.php
+lines: 16–24
+fix: extract to local variable with ?? "", split required vs format check
+---
+- if ($_POST["age"]) {
+-     $age = $_POST["age"];
+-     if (!is_numeric($age)) {
+-         $errors[] = "Age must be a number.";
+-     }
+- } else {
+-     $errors[] = "Age is required.";
+- }
++ $age = $_POST["age"] ?? "";
++ if ($age === "") {
++     $errors[] = "Age is required.";
++ } elseif (!is_numeric($age)) {
++     $errors[] = "Age must be a number.";
++ }
+
+file: LegacyUserLogic.php
+lines: 26–30
+fix: extract to local variable with ?? "", removed 3 inline accesses, tightened to !==
+---
+- if ($_POST["sex"] == "male" || $_POST["sex"] == "female" || $_POST["sex"] == "other") {
+-     $sex = $_POST["sex"];
+- } else {
+-     $errors[] = "Sex is required.";
+- }
++ $sex = $_POST["sex"] ?? "";
++ if ($sex !== "male" && $sex !== "female" && $sex !== "other") {
++     $errors[] = "Sex is required.";
++ }
+
+file: LegacyUserLogic.php
+lines: 32–39
+fix: extract to local variable with ?? "", split required vs format check
+---
+- if ($_POST["tel"]) {
+-     $tel = $_POST["tel"];
+-     if (!preg_match("/^[0-9]{10,15}$/", $tel)) {
+-         $errors[] = "Invalid telephone number.";
+-     }
+- } else {
+-     $errors[] = "Telephone is required.";
+- }
++ $tel = $_POST["tel"] ?? "";
++ if ($tel === "") {
++     $errors[] = "Telephone is required.";
++ } elseif (!preg_match("/^[0-9]{10,15}$/", $tel)) {
++     $errors[] = "Invalid telephone number.";
++ }
+
+file: LegacyUserLogic.php
+lines: 41–48
+fix: extract to local variable with ?? "", split required vs format check
+---
+- if ($_POST["email"]) {
+-     $email = $_POST["email"];
+-     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+-         $errors[] = "Invalid email.";
+-     }
+- } else {
+-     $errors[] = "Email is required.";
+- }
++ $email = $_POST["email"] ?? "";
++ if ($email === "") {
++     $errors[] = "Email is required.";
++ } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
++     $errors[] = "Invalid email.";
++ }
+
+file: LegacyUserLogic.php
+lines: 51–55
+fix: extract to local variable with ?? ""
+---
+- if ($_POST["address"]) {
+-     $address = $_POST["address"];
+- } else {
+-     $errors[] = "Address is required.";
+- }
++ $address = $_POST["address"] ?? "";
++ if ($address === "") {
++     $errors[] = "Address is required.";
++ }
+
+file: LegacyUserLogic.php
+line: 70
+fix: added string type hints and void return type (PHP 7.0+)
+---
+- function saveUser($name, $age, $sex, $tel, $email, $address) {
++ function saveUser(string $name, string $age, string $sex, string $tel, string $email, string $address): void {
+
+file: LegacyUserLogic.php
+lines: 75–76
+action: NEEDS_HUMAN_REVIEW
+reason: raw variable interpolation in SQL — injection risk; no safe default exists for required fields
+AGENT 3 — VERIFIER
+
+
+file: LegacyUserLogic.php
+line: 7
+status: OK — ?? "" on REQUEST_METHOD is safe; === tightens loose == correctly
+
+file: LegacyUserLogic.php
+lines: 9–13
+status: OK
+
+file: LegacyUserLogic.php
+lines: 16–24
+severity: warning
+issue: behavior change for age "0" — original falsy check treated "0" as "Age is required";
+       ?? "" now passes "0" through to is_numeric (which is correct but differs from original)
+suggestion: confirm "0" is not a valid age in this domain; if so, add an explicit range check
+
+file: LegacyUserLogic.php
+lines: 26–30
+status: OK — single read, strict !== comparison, semantics preserved
+
+file: LegacyUserLogic.php
+lines: 32–39
+status: OK
+
+file: LegacyUserLogic.php
+lines: 41–48
+status: OK
+
+file: LegacyUserLogic.php
+lines: 51–55
+status: OK
+
+file: LegacyUserLogic.php
+lines: 75–76
+severity: error
+issue: required fields fed into raw SQL string interpolation — SQL injection
+suggestion: replace with a PDO prepared statement using named placeholders
+All fixes pass except the pre-existing SQL injection (flagged as error — annotated for human review). Now writing the output file.
+
+Write C:\Users\ABC\OneDrive\ドキュメント\refactorTools\phpForm\refactored.php
+66 lines
+<?php
+// Refactored output — Scanner → Fixer → Verifier pipeline
+// Verifier warnings:
+//   - age "0" behavior changed (see line ~20): original treated "0" as missing; ?? "" now passes it through
+//   - SQL injection in saveUser() still present — NEEDS_HUMAN_REVIEW (replace with prepared statement)
+
+$errors = [];
+$name = $age = $sex = $tel = $email = $address = "";
+
+if (($_SERVER["REQUEST_METHOD"] ?? "") === "POST") {
+
+    $name = $_POST["name"] ?? "";
+    if ($name === "") {
+        $errors[] = "Name is required.";
+    }
+
+    $age = $_POST["age"] ?? "";
+    if ($age === "") {
+        $errors[] = "Age is required.";
+    } elseif (!is_numeric($age)) {
+        $errors[] = "Age must be a number.";
+    }
+
+    $sex = $_POST["sex"] ?? "";
+    if ($sex !== "male" && $sex !== "female" && $sex !== "other") {
+        $errors[] = "Sex is required.";
+    }
+
+    $tel = $_POST["tel"] ?? "";
+    if ($tel === "") {
+        $errors[] = "Telephone is required.";
+    } elseif (!preg_match("/^[0-9]{10,15}$/", $tel)) {
+        $errors[] = "Invalid telephone number.";
+    }
+
+    $email = $_POST["email"] ?? "";
+    if ($email === "") {
+        $errors[] = "Email is required.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Invalid email.";
+    }
+
+    $address = $_POST["address"] ?? "";
+    if ($address === "") {
+        $errors[] = "Address is required.";
+    }
+
+    if (count($errors) === 0) {
+        echo "Welcome, " . $name . "!";
+        saveUser($name, $age, $sex, $tel, $email, $address);
+    } else {
+        foreach ($errors as $error) {
+            echo "<p style='color:red;'>" . $error . "</p>";
+        }
+    }
+}
+
+// NEEDS_HUMAN_REVIEW: $sql uses raw interpolation — replace with a PDO prepared statement
+function saveUser(string $name, string $age, string $sex, string $tel, string $email, string $address): void {
+    $db = new PDO("mysql:host=localhost;dbname=mydb", "root", "");
+
+    $sql = "INSERT INTO users (name, age, sex, tel, email, address)
+            VALUES ('$name', '$age', '$sex', '$tel', '$email', '$address')";
+    $db->query($sql);
+}
+Done. refactored.php is saved. Here's a summary of what each agent did:
+
+Agent	Result
+Scanner	Found 13 unguarded array accesses across 7 superglobal reads
+Fixer	Applied ?? "" to all text fields, extracted each to a local variable, added type hints to saveUser, flagged SQL injection for human review
+Verifier	Passed all fixes; raised 1 warning (age "0" behavior change), 1 error (pre-existing SQL injection still needs a prepared statement)
